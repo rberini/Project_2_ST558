@@ -1,11 +1,93 @@
 ---
 title: "Mobile Device Usage App Prep"
-format: pdf
+format: html
 editor: visual
 ---
 
-###Load Required Packages
+###Load required packages
+
 ```{r}
 library(tidyverse)
+library(janitor)
+```
+
+###Read in data set
+```{r}
+user_behavior_dataset <-
+  read_csv("user_behavior_dataset.csv") |>
+  clean_names() |>
+  mutate(across(c(device_model, operating_system, gender, user_behavior_class), as.factor)) |>
+  mutate(user_id = as.character(user_id))
+```
+
+##Numerical and graphical summaries
+
+###One-way and two-way contingency tables
+```{r}
+user_behavior_dataset |>
+  group_by(device_model) |>
+  summarise(count = n())
+```
+```{r}
+user_behavior_dataset |>
+  group_by(device_model, gender) |>
+  summarise(count = n()) |>
+  pivot_wider(names_from = gender, values_from = count)
+```
+
+###Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables
+```{r}
+user_behavior_dataset |>
+  group_by(user_behavior_class) |>
+  summarise(across(where(is.numeric),
+                   list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                   .names = "{.fn}_{.col}"))|>
+  mutate(across(where(is.numeric), round, 2))
+```
+```{r}
+user_behavior_dataset |>
+  group_by(gender) |>
+  summarise(across(where(is.numeric),
+                   list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                   .names = "{.fn}_{.col}"))|>
+  mutate(across(where(is.numeric), round, 2))
+```
+```{r}
+user_behavior_dataset |>
+  group_by(device_model) |>
+  summarise(across(where(is.numeric),
+                   list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                   .names = "{.fn}_{.col}"))|>
+  mutate(across(where(is.numeric), round, 2))
+```
+```{r}
+user_behavior_dataset |>
+  group_by(operating_system) |>
+  summarise(across(where(is.numeric),
+                   list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                   .names = "{.fn}_{.col}"))|>
+  mutate(across(where(is.numeric), round, 2))
+```
+
+```{r}
+user_behavior_dataset |>
+  ggplot(aes(x = user_behavior_class, fill = device_model)) +
+  geom_bar() +
+  xlab("User Behavior Class") +
+  ylab("Count") +
+  labs(fill = "Device Model") +
+  ggtitle("Device Models by User Behavior Class") +
+  scale_fill_brewer(palette="Spectral")
+```
+
+```{r}
+user_behavior_dataset |>
+  ggplot(aes(x = gender, fill = user_behavior_class)) +
+  geom_bar(position = "dodge") +
+  xlab("Gender") +
+  ylab("Count") +
+  labs(fill = "User Behavior Class") +
+  ggtitle("User Behavior Class by Gender") +
+  scale_fill_brewer(palette="Spectral")
 ```
 
