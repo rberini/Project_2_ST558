@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-###Load required packages
+### Load required packages
 
 ```{r}
 library(tidyverse)
@@ -13,7 +13,7 @@ library(ggalluvial)
 library(ggmosaic)
 ```
 
-###Read in data set
+### Read in data set
 
 ```{r}
 user_behavior_dataset <-
@@ -23,9 +23,9 @@ user_behavior_dataset <-
   mutate(user_id = as.character(user_id))
 ```
 
-##Numerical and graphical summaries
+## Numerical and graphical summaries
 
-###One-way and two-way contingency tables
+### One-way and two-way contingency tables
 
 ```{r}
 user_behavior_dataset |>
@@ -40,7 +40,7 @@ user_behavior_dataset |>
   pivot_wider(names_from = gender, values_from = count)
 ```
 
-###Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables
+### Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables
 
 ```{r}
 user_behavior_dataset |>
@@ -114,7 +114,6 @@ user_behavior_dataset |>
   scale_fill_brewer(palette="Set1")
 ```
 
-
 ```{r}
 user_behavior_dataset |>
   select(where(is.numeric)) |>
@@ -158,8 +157,6 @@ user_behavior_dataset |>
   scale_fill_brewer(palette="Set1")
 ```
 
-
-
 ```{r}
 user_behavior_dataset |>
   mutate(age_group = cut(age,
@@ -186,4 +183,3 @@ user_behavior_dataset |>
   ggtitle("Relative Size of User Behavior Class by Age Group") +
   scale_fill_brewer(palette="Set1")
 ```
-

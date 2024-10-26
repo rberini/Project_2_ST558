@@ -133,7 +133,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>###Load required packages</p>
+<section id="load-required-packages" class="level3">
+<h3 class="anchored" data-anchor-id="load-required-packages">Load required packages</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
@@ -160,7 +161,9 @@ The following objects are masked from 'package:stats':
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggalluvial)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggmosaic)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>###Read in data set</p>
+</section>
+<section id="read-in-data-set" class="level3">
+<h3 class="anchored" data-anchor-id="read-in-data-set">Read in data set</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>user_behavior_dataset <span class="ot">&lt;-</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_csv</span>(<span class="st">"user_behavior_dataset.csv"</span>) <span class="sc">|&gt;</span></span>
@@ -178,8 +181,11 @@ dbl (8): User ID, App Usage Time (min/day), Screen On Time (hours/day), Batt...
 ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 </div>
 </div>
-<p>##Numerical and graphical summaries</p>
-<p>###One-way and two-way contingency tables</p>
+</section>
+<section id="numerical-and-graphical-summaries" class="level2">
+<h2 class="anchored" data-anchor-id="numerical-and-graphical-summaries">Numerical and graphical summaries</h2>
+<section id="one-way-and-two-way-contingency-tables" class="level3">
+<h3 class="anchored" data-anchor-id="one-way-and-two-way-contingency-tables">One-way and two-way contingency tables</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>user_behavior_dataset <span class="sc">|&gt;</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(device_model) <span class="sc">|&gt;</span></span>
@@ -216,7 +222,9 @@ dbl (8): User ID, App Usage Time (min/day), Screen On Time (hours/day), Batt...
 5 Xiaomi Mi 11           78    68</code></pre>
 </div>
 </div>
-<p>###Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables</p>
+</section>
+<section id="numeric-summaries-means-medians-sds-etc.-for-quantitative-variables-at-levels-of-categorical-variables" class="level3">
+<h3 class="anchored" data-anchor-id="numeric-summaries-means-medians-sds-etc.-for-quantitative-variables-at-levels-of-categorical-variables">Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables</h3>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>user_behavior_dataset <span class="sc">|&gt;</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(user_behavior_class) <span class="sc">|&gt;</span></span>
@@ -502,6 +510,8 @@ age                                   0.00 1.00</code></pre>
 </div>
 
 
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
