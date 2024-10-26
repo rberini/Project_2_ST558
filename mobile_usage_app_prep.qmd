@@ -9,9 +9,12 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(janitor)
+library(ggalluvial)
+library(ggmosaic)
 ```
 
 ###Read in data set
+
 ```{r}
 user_behavior_dataset <-
   read_csv("user_behavior_dataset.csv") |>
@@ -23,11 +26,13 @@ user_behavior_dataset <-
 ##Numerical and graphical summaries
 
 ###One-way and two-way contingency tables
+
 ```{r}
 user_behavior_dataset |>
   group_by(device_model) |>
   summarise(count = n())
 ```
+
 ```{r}
 user_behavior_dataset |>
   group_by(device_model, gender) |>
@@ -36,6 +41,7 @@ user_behavior_dataset |>
 ```
 
 ###Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables
+
 ```{r}
 user_behavior_dataset |>
   group_by(user_behavior_class) |>
@@ -44,6 +50,7 @@ user_behavior_dataset |>
                    .names = "{.fn}_{.col}"))|>
   mutate(across(where(is.numeric), round, 2))
 ```
+
 ```{r}
 user_behavior_dataset |>
   group_by(gender) |>
@@ -52,6 +59,7 @@ user_behavior_dataset |>
                    .names = "{.fn}_{.col}"))|>
   mutate(across(where(is.numeric), round, 2))
 ```
+
 ```{r}
 user_behavior_dataset |>
   group_by(device_model) |>
@@ -60,6 +68,7 @@ user_behavior_dataset |>
                    .names = "{.fn}_{.col}"))|>
   mutate(across(where(is.numeric), round, 2))
 ```
+
 ```{r}
 user_behavior_dataset |>
   group_by(operating_system) |>
@@ -72,12 +81,13 @@ user_behavior_dataset |>
 ```{r}
 user_behavior_dataset |>
   ggplot(aes(x = user_behavior_class, fill = device_model)) +
-  geom_bar() +
+  geom_bar(position = "fill") +
   xlab("User Behavior Class") +
-  ylab("Count") +
+  ylab("Percent") +
+  scale_y_continuous(labels = scales::percent) +
   labs(fill = "Device Model") +
   ggtitle("Device Models by User Behavior Class") +
-  scale_fill_brewer(palette="Spectral")
+  scale_fill_brewer(palette="Set1")
 ```
 
 ```{r}
@@ -88,6 +98,92 @@ user_behavior_dataset |>
   ylab("Count") +
   labs(fill = "User Behavior Class") +
   ggtitle("User Behavior Class by Gender") +
-  scale_fill_brewer(palette="Spectral")
+  scale_fill_brewer(palette="Set1")
+```
+
+```{r}
+user_behavior_dataset |>
+  ggplot(aes(number_of_apps_installed, operating_system)) +
+  geom_boxplot(aes(fill = operating_system)) +
+  coord_flip() +
+  xlab("Number of Apps Installed") +
+  ylab("Operating System") +
+  labs(title = "App Installation Distribution",
+       subtitle = "Considering Effects of Operating System", fill = "Operating System") +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette="Set1")
+```
+
+
+```{r}
+user_behavior_dataset |>
+  select(where(is.numeric)) |>
+  cor() |>
+  round(2)
+```
+
+```{r}
+user_behavior_dataset |>
+  ggplot(aes(age, screen_on_time_hours_day, color = gender)) +
+  geom_point() +
+  scale_color_brewer(palette = "Set1") +
+  xlab("Age") +
+  ylab("Screen Time") +
+  labs(title = "Relationship between Age and Screen Time",
+       subtitle = "Considering Effects of Gender and Device Model",
+       color = "Gender") +
+  facet_wrap(~ device_model)
+```
+
+```{r}
+#| warning: false
+
+user_behavior_dataset |>
+  mutate(screen_time = cut(screen_on_time_hours_day,
+                        breaks = 5,
+                        labels = c("Low", "Med-Low", "Medium", "Med-High", "High"))) |>
+  mutate(app_usage = cut(app_usage_time_min_day,
+                        breaks = 5,
+                        labels = c("Low", "Med-Low", "Medium", "Med-High", "High"))) |>
+  mutate(data_usage = cut(data_usage_mb_day,
+                        breaks = 5,
+                        labels = c("Low", "Med-Low", "Medium", "Med-High", "High"))) |>
+  ggplot(aes(axis1 = app_usage, axis2 = screen_time, axis3 = data_usage)) +
+  geom_alluvium(aes(fill = user_behavior_class)) +
+  geom_stratum() +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("App Usage", "Screen Time", "Data Usage")) +
+  labs(fill = "User Behavior Class") +
+  ggtitle("Analyzing the Composition of User Behavior Class") +
+  scale_fill_brewer(palette="Set1")
+```
+
+
+
+```{r}
+user_behavior_dataset |>
+  mutate(age_group = cut(age,
+                        breaks = c(15, 25, 35, 45, 55, 65),
+                        labels = c("Under 25", "25-34", "35-44", "45-54", "55 and Over"),
+                        include.lowest = T,
+                        right = F)) |>
+  mutate(app_usage = cut(app_usage_time_min_day,
+                        breaks = 2,
+                        labels = c("Low", "High"),
+                        include.lowest = T,
+                        right = F)) |>
+  mutate(data_usage = cut(data_usage_mb_day,
+                        breaks = 2,
+                        labels = c("Light", "Heavy"),
+                        include.lowest = T,
+                        right = F)) |>
+  ggplot() +
+  geom_mosaic(aes(x = product(age_group), fill = user_behavior_class)) +
+  theme_mosaic() +
+  theme(legend.position = "none") +
+  xlab("Age Group") +
+  ylab("User Behavior Class") +
+  ggtitle("Relative Size of User Behavior Class by Age Group") +
+  scale_fill_brewer(palette="Set1")
 ```
 
