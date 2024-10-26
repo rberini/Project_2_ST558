@@ -86,7 +86,7 @@ user_behavior_dataset |>
   ylab("Percent") +
   scale_y_continuous(labels = scales::percent) +
   labs(fill = "Device Model") +
-  ggtitle("Device Models by User Behavior Class") +
+  ggtitle("Device Models by User Behavior Classification") +
   scale_fill_brewer(palette="Set1")
 ```
 
@@ -97,7 +97,7 @@ user_behavior_dataset |>
   xlab("Gender") +
   ylab("Count") +
   labs(fill = "User Behavior Class") +
-  ggtitle("User Behavior Class by Gender") +
+  ggtitle("User Behavior Classification by Gender") +
   scale_fill_brewer(palette="Set1")
 ```
 
@@ -153,25 +153,17 @@ user_behavior_dataset |>
   geom_label(stat = "stratum", aes(label = after_stat(stratum))) +
   scale_x_discrete(limits = c("App Usage", "Screen Time", "Data Usage")) +
   labs(fill = "User Behavior Class") +
-  ggtitle("Analyzing the Composition of User Behavior Class") +
+  ggtitle("Exploring Composition of User Behavior Classification") +
   scale_fill_brewer(palette="Set1")
 ```
 
 ```{r}
+#| warning: false
+
 user_behavior_dataset |>
   mutate(age_group = cut(age,
                         breaks = c(15, 25, 35, 45, 55, 65),
                         labels = c("Under 25", "25-34", "35-44", "45-54", "55 and Over"),
-                        include.lowest = T,
-                        right = F)) |>
-  mutate(app_usage = cut(app_usage_time_min_day,
-                        breaks = 2,
-                        labels = c("Low", "High"),
-                        include.lowest = T,
-                        right = F)) |>
-  mutate(data_usage = cut(data_usage_mb_day,
-                        breaks = 2,
-                        labels = c("Light", "Heavy"),
                         include.lowest = T,
                         right = F)) |>
   ggplot() +
@@ -180,6 +172,6 @@ user_behavior_dataset |>
   theme(legend.position = "none") +
   xlab("Age Group") +
   ylab("User Behavior Class") +
-  ggtitle("Relative Size of User Behavior Class by Age Group") +
+  ggtitle("Relative Size of User Behavior Classification by Age Group") +
   scale_fill_brewer(palette="Set1")
 ```
