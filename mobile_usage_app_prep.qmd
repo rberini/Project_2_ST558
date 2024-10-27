@@ -43,6 +43,8 @@ user_behavior_dataset |>
 ### Numeric summaries (means, medians, sds, etc.) for quantitative variables at levels of categorical variables
 
 ```{r}
+#| warning: false
+
 user_behavior_dataset |>
   group_by(user_behavior_class) |>
   summarise(across(where(is.numeric),
