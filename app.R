@@ -13,8 +13,10 @@ user_behavior_dataset <-
   mutate(across(c(device_model, operating_system, gender, user_behavior_class), as.factor)) |>
   mutate(user_id = as.character(user_id))
 
-#establish numeric_variable_choices
+#establish variable_choices
+all_var_choices <- names(user_behavior_dataset[-1])
 num_var_choices <- names(select(user_behavior_dataset, where(is.numeric)))
+cat_var_choices <- all_var_choices[!all_var_choices %in% num_var_choices]
 
 #ui section
 ui <- fluidPage(
@@ -49,7 +51,7 @@ ui <- fluidPage(
                    column(8,
                  "The Mobile Device Usage and User Behavior Dataset provides a comprehensive analysis of mobile device usage patterns and user behavior classification. It contains 700 samples of user data, including metrics such as app usage time, screen-on time, battery drain, and data consumption. Each entry is categorized into one of five user behavior classes, ranging from light to extreme usage, allowing for insightful analysis and modeling.
 
-Data dictiomnary:
+Data dictionary:
 
 `user_id`: Unique identifier for each user.
 `device_model`: Model of the user's smartphone.
@@ -82,7 +84,14 @@ Data dictiomnary:
                                    ))),
                  tabPanel("Data Exploration",
                           tabsetPanel(
-                            tabPanel("Summary"),
+                            tabPanel("Summary",
+                                     selectInput("summ_var",
+                                                 "Select variable for summary",
+                                                 choices = all_var_choices),
+                                     selectInput("group_var",
+                                                 "Select grouping variable",
+                                                 choices = cat_var_choices),
+                                     DTOutput("summ_table")),
                             tabPanel("Plot")))
     )
     )
@@ -97,6 +106,10 @@ server <- function(input, output, session) {
                       choices = num_var_choices[!num_var_choices %in% input$num_one])
   })
   
+  observeEvent(input$summ_var, {
+    updateSelectInput(session, "group_var",
+                      choices = cat_var_choices[!cat_var_choices %in% input$summ_var])
+  })
   
   output$slider_num_one <- renderUI({
     req(input$num_one)
@@ -142,7 +155,33 @@ server <- function(input, output, session) {
       write.csv(ubd_subset(), con)
       }
     )
-}
+  
+  summaries <- eventReactive(c(input$summ_var, input$group_var), {
+    req(input$summ_var, input$group_var)
+    data <- ubd_subset()
+    if(input$summ_var %in% num_var_choices) {
+      data |>
+        group_by(.data[[input$group_var]]) |>
+        summarise(across(where(is.numeric),
+                         list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                         .names = "{.fn}_{.col}"))|>
+        mutate(across(where(is.numeric), round, 2))
+        # summarise(mean = mean(.data[[input$summ_var]], na.rm = T),
+        #           median = median(.data[[input$summ_var]]), na.rm = T,
+        #           sd = sd(.data[[input$summ_var]]), na.rm = T,
+        #           IQR = IQR(.data[[input$summ_var]]), na.rm = T,
+        #           .groups = "drop") |>
+        # round(2)
+    } else {
+    data |>
+        group_by(.data[[input$summ_var]], .data[[input$group_var]]) |>
+        summarise(count = n()) |>
+        pivot_wider(names_from = .data[[input$group_var]], values_from = count)
+    }
+    })
+  
+  output$summ_table <- renderDT(datatable(summaries()))
 
+  }
 #run section
 shinyApp(ui, server)
