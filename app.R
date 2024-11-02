@@ -12,15 +12,34 @@ user_behavior_dataset <-
   mutate(across(c(device_model, operating_system, gender, user_behavior_class), as.factor)) |>
   mutate(user_id = as.character(user_id))
 
+#establish numeric_variable_choices
+num_var_choices <- names(select(user_behavior_dataset, where(is.numeric)))
+
 #ui section
 ui <- fluidPage(
   titlePanel("Mobile Behavior Data Exploration"),
   sidebarLayout(
     sidebarPanel(
-      h2("Select Variables ... :"),
-      h2("..."),
-
-      h2("...")
+      h2("Select how to subset mobile behavior data:"),
+      #Choose (at least) two categorical variables they can subset from. If there are groups of categories that make sense to have them choose for a given variable, that’s fine. That is, they don’t need to be able to choose any level of the each variable to subset. The user should be able to select all levels as well.
+      selectInput("cat_device",
+                  "Device models",
+                  choices = levels(user_behavior_dataset$device_model),
+                  multiple = T),
+      selectInput("cat_behavior",
+                  "User behavior classes",
+                  choices = levels(user_behavior_dataset$user_behavior_class),
+                  multiple = T),
+      selectInput("num_one",
+                  "First numeric variable",
+                  choices = num_var_choices),
+      uiOutput("slider_num_one"),
+      selectInput("num_two",
+                  "Second numeric variable",
+                  choices = num_var_choices),
+      uiOutput("slider_num_two"),
+      actionButton("subset_data",
+                   "Update for Subset")
     ),
     mainPanel(
       tabsetPanel(
@@ -64,7 +83,51 @@ Data dictiomnary:
 
 
 #server section
-server <- function(input, output, session) {}
+server <- function(input, output, session) {
+  observeEvent(input$num_one, {
+    updateSelectInput(session, "num_two",
+                      choices = num_var_choices[!num_var_choices %in% input$num_one])
+  })
+  
+  
+  output$slider_num_one <- renderUI({
+    req(input$num_one)
+    min = min(user_behavior_dataset[input$num_one])
+    max = max(user_behavior_dataset[input$num_one])
+    sliderInput("dynamic",
+                "Range",
+                min = min,
+                max = max,
+                value = c(min, max))
+  })
+  
+  output$slider_num_two <- renderUI({
+    req(input$num_two)
+    min = min(user_behavior_dataset[input$num_two])
+    max = max(user_behavior_dataset[input$num_two])
+    sliderInput("dynamic",
+                "Range",
+                min = min,
+                max = max,
+                value = c(min, max))
+  })
+  
+  ubd_subset <- reactive({
+    user_behavior_dataset |>
+      select(input$cat_device) |>
+      select(input$cat_behavior) |>
+      select(input$num_one) |>
+      filter(between(
+        input$num_one,
+        left = input$slider_num_one[1],
+        right = input$slider_num_one[2])) |>
+      select(input$num_two) |>
+      filter(between(
+        input$num_two,
+        left = input$slider_num_two[1],
+        right = input$slider_num_two[2])) 
+  })
+}
 
 #run section
 shinyApp(ui, server)
