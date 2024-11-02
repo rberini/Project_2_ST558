@@ -2,6 +2,7 @@ library(shiny)
 library(bslib)
 library(tidyverse)
 library(janitor)
+library(DT)
 library(ggalluvial)
 library(ggmosaic)
 
@@ -20,7 +21,7 @@ ui <- fluidPage(
   titlePanel("Mobile Behavior Data Exploration"),
   sidebarLayout(
     sidebarPanel(
-      h2("Select how to subset mobile behavior data:"),
+      h2("Select how to subset the mobile behavior data:"),
       #Choose (at least) two categorical variables they can subset from. If there are groups of categories that make sense to have them choose for a given variable, that’s fine. That is, they don’t need to be able to choose any level of the each variable to subset. The user should be able to select all levels as well.
       selectInput("cat_device",
                   "Device models",
@@ -39,7 +40,7 @@ ui <- fluidPage(
                   choices = num_var_choices),
       uiOutput("slider_num_two"),
       actionButton("subset_data",
-                   "Update for Subset")
+                   "Apply Subset")
     ),
     mainPanel(
       tabsetPanel(
@@ -60,7 +61,10 @@ Data dictiomnary:
 `data_usage_mb_day`: Daily mobile data consumption in megabytes.
 `age`: Age of the user.
 `gender`: Gender of the user (Male or Female).
-`user_behavior_class`: Classification of user behavior based on usage patterns (1 to 5)."),
+`user_behavior_class`: Classification of user behavior based on usage patterns (1 to 5).
+                 Orientation of app:
+                 Data Download Tab: ...
+                 Data Exploration Tab: ..."),
                  column(4,
                    img(
                      src = "devices.jpeg",
@@ -68,14 +72,18 @@ Data dictiomnary:
                      width = 200,
                      alt = "Picture of mobile devices"
                    ))
-                 ),
-        tabsetPanel(
-          tabPanel("Data Download"),
-          tabPanel("Data Exploration",
-                 tabsetPanel(
-                   tabPanel("Summary"),
-                   tabPanel("Plot"))))
-      )
+                 )),
+                 tabPanel("Data Download",
+                          fluidRow(
+                            column(12,
+                                   downloadButton("download_subset",
+                                      "Download Subset Data"),
+                                   DTOutput("ubd_subset_dt")
+                                   ))),
+                 tabPanel("Data Exploration",
+                          tabsetPanel(
+                            tabPanel("Summary"),
+                            tabPanel("Plot")))
     )
     )
   )
@@ -92,41 +100,48 @@ server <- function(input, output, session) {
   
   output$slider_num_one <- renderUI({
     req(input$num_one)
-    min = min(user_behavior_dataset[input$num_one])
-    max = max(user_behavior_dataset[input$num_one])
-    sliderInput("dynamic",
+    min_val <- min(user_behavior_dataset[[input$num_one]], na.rm = T)
+    max_val <- max(user_behavior_dataset[[input$num_one]], na.rm = T)
+    sliderInput("dyn_slider_one",
                 "Range",
-                min = min,
-                max = max,
-                value = c(min, max))
+                min = min_val,
+                max = max_val,
+                value = c(min_val, max_val))
   })
   
   output$slider_num_two <- renderUI({
     req(input$num_two)
-    min = min(user_behavior_dataset[input$num_two])
-    max = max(user_behavior_dataset[input$num_two])
-    sliderInput("dynamic",
+    min_val <- min(user_behavior_dataset[[input$num_two]], na.rm = T)
+    max_val <- max(user_behavior_dataset[[input$num_two]], na.rm = T)
+    sliderInput("dyn_slider_two",
                 "Range",
-                min = min,
-                max = max,
-                value = c(min, max))
+                min = min_val,
+                max = max_val,
+                value = c(min_val, max_val))
   })
   
-  ubd_subset <- reactive({
+  ubd_subset <- eventReactive(input$subset_data, {
     user_behavior_dataset |>
-      select(input$cat_device) |>
-      select(input$cat_behavior) |>
-      select(input$num_one) |>
-      filter(between(
-        input$num_one,
-        left = input$slider_num_one[1],
-        right = input$slider_num_one[2])) |>
-      select(input$num_two) |>
-      filter(between(
-        input$num_two,
-        left = input$slider_num_two[1],
-        right = input$slider_num_two[2])) 
+      filter(device_model %in% input$cat_device,
+             user_behavior_class %in% input$cat_behavior) |>
+      filter(between(!!sym(input$num_one),
+                     input$dyn_slider_one[1],
+                     input$dyn_slider_one[2])) |>
+      filter(between(!!sym(input$num_two),
+                     input$dyn_slider_two[1],
+                     input$dyn_slider_two[2]))
   })
+  
+  output$ubd_subset_dt <- renderDT(datatable(ubd_subset()))
+  
+  output$download_subset <- downloadHandler(
+    filename = function() {
+      paste('ubd-subset-', Sys.Date(), '.csv', sep='')
+      },
+    content = function(con) {
+      write.csv(ubd_subset(), con)
+      }
+    )
 }
 
 #run section
