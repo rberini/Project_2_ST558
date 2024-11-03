@@ -16,7 +16,7 @@ user_behavior_dataset <-
 #establish variable_choices
 all_var_choices <- names(user_behavior_dataset[-1])
 num_var_choices <- names(select(user_behavior_dataset, where(is.numeric)))
-cat_var_choices <- all_var_choices[!all_var_choices %in% num_var_choices]
+cat_var_choices <- append(all_var_choices[!all_var_choices %in% num_var_choices], "none")
 
 #ui section
 ui <- fluidPage(
@@ -159,28 +159,40 @@ server <- function(input, output, session) {
   summaries <- eventReactive(c(input$summ_var, input$group_var), {
     req(input$summ_var, input$group_var)
     data <- ubd_subset()
-    if(input$summ_var %in% num_var_choices) {
-      data |>
-        group_by(.data[[input$group_var]]) |>
-        summarise(across(where(is.numeric),
-                         list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
-                         .names = "{.fn}_{.col}"))|>
-        mutate(across(where(is.numeric), round, 2))
-        # summarise(mean = mean(.data[[input$summ_var]], na.rm = T),
-        #           median = median(.data[[input$summ_var]]), na.rm = T,
-        #           sd = sd(.data[[input$summ_var]]), na.rm = T,
-        #           IQR = IQR(.data[[input$summ_var]]), na.rm = T,
-        #           .groups = "drop") |>
-        # round(2)
+    if(input$group_var == "none") {
+      if(input$summ_var %in% num_var_choices) {
+        data |>
+        summarise(mean = mean(.data[[input$summ_var]], na.rm = T),
+                  median = median(.data[[input$summ_var]]), na.rm = T,
+                  sd = sd(.data[[input$summ_var]]), na.rm = T,
+                  IQR = IQR(.data[[input$summ_var]]), na.rm = T,
+                  .groups = "drop") |>
+        round(2)
+      } else {
+        data |>
+          group_by(.data[[input$summ_var]]) |>
+          summarise(count = n())
+        }
     } else {
-    data |>
-        group_by(.data[[input$summ_var]], .data[[input$group_var]]) |>
-        summarise(count = n()) |>
-        pivot_wider(names_from = .data[[input$group_var]], values_from = count)
+      if(input$summ_var %in% num_var_choices) {
+        data |>
+          select(.data[[input$group_var]], .data[[input$summ_var]]) |>
+          group_by(.data[[input$group_var]]) |>
+          summarise(across(where(is.numeric),
+                           list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
+                           .names = "{.fn}"))|>
+          mutate(across(where(is.numeric), round, 2))
+      } else {
+      data |>
+          group_by(.data[[input$summ_var]], .data[[input$group_var]]) |>
+          summarise(count = n()) |>
+          pivot_wider(names_from = .data[[input$group_var]], values_from = count)
+      }
     }
-    })
+    }
+    )
   
-  output$summ_table <- renderDT(datatable(summaries()))
+  output$summ_table <- renderDT(datatable(summaries(), rownames = F))
 
   }
 #run section
