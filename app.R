@@ -17,6 +17,7 @@ user_behavior_dataset <-
 all_var_choices <- names(user_behavior_dataset[-1])
 num_var_choices <- names(select(user_behavior_dataset, where(is.numeric)))
 cat_var_choices <- append(all_var_choices[!all_var_choices %in% num_var_choices], "none")
+mod_var_choices <- append(all_var_choices, "none")
 
 #ui section
 ui <- fluidPage(
@@ -90,9 +91,27 @@ Data dictionary:
                                                  choices = all_var_choices),
                                      selectInput("group_var",
                                                  "Select grouping variable",
-                                                 choices = cat_var_choices),
+                                                 choices = cat_var_choices,
+                                                 selected = "none"),
                                      DTOutput("summ_table")),
-                            tabPanel("Plot")))
+                            tabPanel("Plot",
+                                     selectInput("axis1_var",
+                                                 "Select variable for first axis",
+                                                 choices = all_var_choices),
+                                     selectInput("axis2_var",
+                                                 "Select variable for second axis",
+                                                 choices = mod_var_choices,
+                                                 selected = "none"),
+                                     selectInput("fill_var",
+                                                 "Select variable fill or color",
+                                                 choices = cat_var_choices,
+                                                 selected = "none"),
+                                     selectInput("facet_var",
+                                                 "Select variable for faceting",
+                                                 choices = cat_var_choices,
+                                                 selected = "none"),
+                                     plotOutput("plot")))
+                          )
     )
     )
   )
@@ -194,6 +213,61 @@ server <- function(input, output, session) {
   
   output$summ_table <- renderDT(datatable(summaries(), rownames = F))
 
+  graph <- eventReactive(c(input$axis1_var, input$axis2_var, input$fill_var, input$facet_var), {
+    req(input$axis1_var, input$axis2_var, input$fill_var, input$facet_var)
+    data <- ubd_subset()
+    g <- ggplot(data) +
+      scale_fill_brewer(palette="Set1")
+    if(input$axis1_var %in% num_var_choices & input$axis2_var %in% num_var_choices) {
+      g <- g +
+        aes_string(x = input$axis1_var,
+                   y = input$axis2_var,
+                   color = if (input$fill_var != "none") input$fill_var else NULL
+                   ) +
+        geom_point() +
+        ggtitle(paste0("Relationship between ", input$axis1_var, " and ", input$axis2_var)) +
+        labs(subtitle = paste0("Considering effects of ", input$fill_var, " and ", input$facet_var),
+             color = input$fill_var)
+    } else if (input$axis1_var %in% num_var_choices & input$axis2_var == "none") {
+      g <- g +
+        aes_string(x = input$axis1_var) +
+        geom_histogram()
+    } else if (input$axis1_var %in% num_var_choices | input$axis2_var %in% num_var_choices) {
+      g <- g +
+        aes_string(x = input$axis1_var,
+                   y = input$axis2_var) +
+        geom_boxplot() +
+        theme(legend.position = "none") +
+        ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$axis2_var))
+    } else if (input$axis2_var != "none") {
+      g <- g +
+        geom_mosaic(
+          aes_string(x = product(!!sym(input$axis1_var)),
+                     fill = input$axis2_var) 
+        ) +
+        theme_mosaic() +
+        theme(legend.position = "none") +
+        ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$axis2_var))
+    } else {
+      g <- g +
+        aes_string(x = input$axis1_var,
+                   fill = if (input$fill_var != "none") input$fill_var else NULL
+                   ) +
+        geom_bar(position = "dodge") +
+        labs(fill = input$fill_var) +
+        ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$fill_var))
+    }
+    if (input$facet_var != "none") {
+      g <- g + facet_wrap(as.formula(paste("~", input$facet_var)))
+    }
+    
+    return(g)
+    }
+  )
+  
+  output$plot <- renderPlot(graph())
+  
+  
   }
 #run section
 shinyApp(ui, server)
