@@ -9,15 +9,15 @@ library(ggmosaic)
 #generate data set
 user_behavior_dataset <-
   read_csv("user_behavior_dataset.csv") |>
-  clean_names() |>
-  mutate(across(c(device_model, operating_system, gender, user_behavior_class), as.factor)) |>
-  mutate(user_id = as.character(user_id))
+  clean_names(case = "big_camel") |>
+  mutate(across(c(DeviceModel, OperatingSystem, Gender, UserBehaviorClass), as.factor)) |>
+  mutate(UserId = as.character(UserId))
 
 #establish variable_choices
 all_var_choices <- names(user_behavior_dataset[-1])
 num_var_choices <- names(select(user_behavior_dataset, where(is.numeric)))
-cat_var_choices <- append(all_var_choices[!all_var_choices %in% num_var_choices], "none")
-mod_var_choices <- append(all_var_choices, "none")
+cat_var_choices <- append(all_var_choices[!all_var_choices %in% num_var_choices], "None")
+mod_var_choices <- append(all_var_choices, "None")
 
 #ui section
 ui <- fluidPage(
@@ -28,11 +28,11 @@ ui <- fluidPage(
       #Choose (at least) two categorical variables they can subset from. If there are groups of categories that make sense to have them choose for a given variable, that’s fine. That is, they don’t need to be able to choose any level of the each variable to subset. The user should be able to select all levels as well.
       selectInput("cat_device",
                   "Device models",
-                  choices = levels(user_behavior_dataset$device_model),
+                  choices = levels(user_behavior_dataset$DeviceModel),
                   multiple = T),
       selectInput("cat_behavior",
                   "User behavior classes",
-                  choices = levels(user_behavior_dataset$user_behavior_class),
+                  choices = levels(user_behavior_dataset$UserBehaviorClass),
                   multiple = T),
       selectInput("num_one",
                   "First numeric variable",
@@ -86,37 +86,51 @@ Data dictionary:
                  tabPanel("Data Exploration",
                           tabsetPanel(
                             tabPanel("Summary",
-                                     selectInput("summ_var",
-                                                 "Select variable for summary",
-                                                 choices = all_var_choices),
-                                     selectInput("group_var",
-                                                 "Select grouping variable",
-                                                 choices = cat_var_choices,
-                                                 selected = "none"),
-                                     DTOutput("summ_table")),
+                                     fluidRow(
+                                       column(6,
+                                              selectInput("summ_var",
+                                                          "Select variable for summary",
+                                                          choices = all_var_choices)),
+                                       column(6,
+                                              selectInput("group_var",
+                                                          "Select grouping variable",
+                                                          choices = cat_var_choices,
+                                                          selected = "None"))
+                                     ),
+                                     fluidRow(
+                                       column(12,
+                                              DTOutput("summ_table")))
+                                     ),
                             tabPanel("Plot",
-                                     selectInput("axis1_var",
-                                                 "Select variable for first axis",
-                                                 choices = all_var_choices),
-                                     selectInput("axis2_var",
-                                                 "Select variable for second axis",
-                                                 choices = mod_var_choices,
-                                                 selected = "none"),
-                                     selectInput("fill_var",
-                                                 "Select variable fill or color",
-                                                 choices = cat_var_choices,
-                                                 selected = "none"),
-                                     selectInput("facet_var",
-                                                 "Select variable for faceting",
-                                                 choices = cat_var_choices,
-                                                 selected = "none"),
+                                     fluidRow(
+                                       column(6, 
+                                              selectInput("axis1_var",
+                                                          "Select variable for first axis",
+                                                          choices = all_var_choices)),
+                                       column(6,
+                                              selectInput("axis2_var",
+                                                          "Select variable for second axis",
+                                                          choices = mod_var_choices,
+                                                          selected = "None")),
+                                     ),
+                                     fluidRow(
+                                       column(6,
+                                              selectInput("fill_var",
+                                                          "Select variable fill or color",
+                                                          choices = cat_var_choices,
+                                                          selected = "None")),
+                                       column(6,
+                                              selectInput("facet_var",
+                                                          "Select variable for faceting",
+                                                          choices = cat_var_choices,
+                                                          selected = "None")),
                                      plotOutput("plot")))
                           )
-    )
-    )
+                          )
+        )
+      )
   )
 )
-
 
 #server section
 server <- function(input, output, session) {
@@ -154,8 +168,8 @@ server <- function(input, output, session) {
   
   ubd_subset <- eventReactive(input$subset_data, {
     user_behavior_dataset |>
-      filter(device_model %in% input$cat_device,
-             user_behavior_class %in% input$cat_behavior) |>
+      filter(DeviceModel %in% input$cat_device,
+             UserBehaviorClass %in% input$cat_behavior) |>
       filter(between(!!sym(input$num_one),
                      input$dyn_slider_one[1],
                      input$dyn_slider_one[2])) |>
@@ -178,7 +192,7 @@ server <- function(input, output, session) {
   summaries <- eventReactive(c(input$summ_var, input$group_var), {
     req(input$summ_var, input$group_var)
     data <- ubd_subset()
-    if(input$group_var == "none") {
+    if(input$group_var == "None") {
       if(input$summ_var %in% num_var_choices) {
         data |>
         summarise(mean = mean(.data[[input$summ_var]], na.rm = T),
@@ -222,13 +236,13 @@ server <- function(input, output, session) {
       g <- g +
         aes_string(x = input$axis1_var,
                    y = input$axis2_var,
-                   color = if (input$fill_var != "none") input$fill_var else NULL
+                   color = if (input$fill_var != "None") input$fill_var else NULL
                    ) +
         geom_point() +
         ggtitle(paste0("Relationship between ", input$axis1_var, " and ", input$axis2_var)) +
         labs(subtitle = paste0("Considering effects of ", input$fill_var, " and ", input$facet_var),
              color = input$fill_var)
-    } else if (input$axis1_var %in% num_var_choices & input$axis2_var == "none") {
+    } else if (input$axis1_var %in% num_var_choices & input$axis2_var == "None") {
       g <- g +
         aes_string(x = input$axis1_var) +
         geom_histogram()
@@ -239,7 +253,7 @@ server <- function(input, output, session) {
         geom_boxplot() +
         theme(legend.position = "none") +
         ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$axis2_var))
-    } else if (input$axis2_var != "none") {
+    } else if (input$axis2_var != "None") {
       g <- g +
         geom_mosaic(
           aes_string(x = product(!!sym(input$axis1_var)),
@@ -251,13 +265,13 @@ server <- function(input, output, session) {
     } else {
       g <- g +
         aes_string(x = input$axis1_var,
-                   fill = if (input$fill_var != "none") input$fill_var else NULL
+                   fill = if (input$fill_var != "None") input$fill_var else NULL
                    ) +
         geom_bar(position = "dodge") +
         labs(fill = input$fill_var) +
         ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$fill_var))
     }
-    if (input$facet_var != "none") {
+    if (input$facet_var != "None") {
       g <- g + facet_wrap(as.formula(paste("~", input$facet_var)))
     }
     
