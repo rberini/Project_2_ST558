@@ -3,8 +3,10 @@ library(bslib)
 library(tidyverse)
 library(janitor)
 library(DT)
-library(ggalluvial)
 library(ggmosaic)
+library(shinyvalidate)
+library(shinyalert)
+library(shinycssloaders)
 
 #generate data set
 user_behavior_dataset <-
@@ -46,44 +48,61 @@ ui <- fluidPage(
                    "Apply Subset")
     ),
     mainPanel(
-      tabsetPanel(
+      tabsetPanel(id = "tab_switch",
         tabPanel("About",
+                 value = 1,
                  fluidRow(
                    column(8,
-                 "The Mobile Device Usage and User Behavior Dataset provides a comprehensive analysis of mobile device usage patterns and user behavior classification. It contains 700 samples of user data, including metrics such as app usage time, screen-on time, battery drain, and data consumption. Each entry is categorized into one of five user behavior classes, ranging from light to extreme usage, allowing for insightful analysis and modeling.
-
-Data dictionary:
-
-`user_id`: Unique identifier for each user.
-`device_model`: Model of the user's smartphone.
-`operating_system`: The OS of the device (iOS or Android).
-`app_usage_time_min_day`: Daily time spent on mobile applications, measured in minutes.
-`screen_on_time_hours_day`: Average hours per day the screen is active.
-`battery_drain_m_ah_day`: Daily battery consumption in mAh.
-`number_of_apps_installed`: Total apps available on the device.
-`data_usage_mb_day`: Daily mobile data consumption in megabytes.
-`age`: Age of the user.
-`gender`: Gender of the user (Male or Female).
-`user_behavior_class`: Classification of user behavior based on usage patterns (1 to 5).
-                 Orientation of app:
-                 Data Download Tab: ...
-                 Data Exploration Tab: ..."),
+                          tags$div(
+                            tags$h3("Purpose and Overview of this Shiny App"),
+                            tags$p("This app allows the user to interactively explore the Mobile Device Usage and User Behavior Dataset (described below). The user can subset the data, download that subset, and generate numeric and graphical summaries of variables, or combinations of variables, in that subset"),
+                            tags$h3("Navgating the App"),
+                            tags$ul(
+                              tags$li("Left Sidebar Panel: Asks the user to subset the data"),
+                              tags$li("Data Download Tab: Allows the user to view and download the subsetted data"),
+                              tags$li("Data Exploration Tab: Allows the user to generate numeric and/or graphical summaries of the subsetted data")
+                            ),
+                            tags$h3("About the Dataset"),
+                            tags$p("The Mobile Device Usage and User Behavior Dataset provides a comprehensive analysis of mobile device usage patterns and user behavior classification. It contains 700 samples of user data. Available metrics are outlined in data dictionary below."),
+                          tags$a(href = "https://www.kaggle.com/datasets/valakhorasani/mobile-device-usage-and-user-behavior-dataset",
+                                 "Click here to access dataset on kaggle",
+                                 target = "_blank",
+                                 rel = "noopener noreferrer"),
+                          tags$p(""),
+                          tags$p("Data dictionary:"),
+                          tags$ul(
+                            tags$li("UserId: Unique identifier for each user"),
+                            tags$li("DeviceModel: Model of the user's smartphone"),
+                            tags$li("OperatingSystem: The OS of the device (iOS or Android)"),
+                            tags$li("AppUsageTimeMinDay: Daily time spent on mobile applications, measured in minutes"),
+                            tags$li("ScreenOnTimeHoursDay: Average hours per day the screen is active"),
+                            tags$li("BatteryDrainMAhDay: Daily battery consumption in mAh"),
+                            tags$li("NumberOfAppsInstalled: Total apps available on the device"),
+                            tags$li("DataUsageMbDay: Daily mobile data consumption in megabytes"),
+                            tags$li("Age: Age of the user"),
+                            tags$li("Gender: Gender of the user (Male or Female)"),
+                            tags$li("UserBehaviorClass: Classification of user behavior based on usage patterns (1 to 5)")
+                          )
+                 )
+                 ),
                  column(4,
                    img(
                      src = "devices.jpeg",
-                     height = 200,
-                     width = 200,
+                     height = 300,
+                     width = 300,
                      alt = "Picture of mobile devices"
                    ))
                  )),
                  tabPanel("Data Download",
+                          value = 2,
                           fluidRow(
                             column(12,
+                                   DTOutput("ubd_subset_dt"),
                                    downloadButton("download_subset",
-                                      "Download Subset Data"),
-                                   DTOutput("ubd_subset_dt")
+                                      "Download Subset Data")
                                    ))),
                  tabPanel("Data Exploration",
+                          value = 3,
                           tabsetPanel(
                             tabPanel("Summary",
                                      fluidRow(
@@ -116,7 +135,7 @@ Data dictionary:
                                      fluidRow(
                                        column(6,
                                               selectInput("fill_var",
-                                                          "Select variable fill or color",
+                                                          "Select variable for fill or color",
                                                           choices = cat_var_choices,
                                                           selected = "None")),
                                        column(6,
@@ -124,7 +143,9 @@ Data dictionary:
                                                           "Select variable for faceting",
                                                           choices = cat_var_choices,
                                                           selected = "None")),
-                                     plotOutput("plot")))
+                                     plotOutput("plot") |>
+                                       withSpinner(type = 5)
+                                     ))
                           )
                           )
         )
@@ -134,6 +155,12 @@ Data dictionary:
 
 #server section
 server <- function(input, output, session) {
+  
+  iv <- InputValidator$new()
+  iv$add_rule("cat_device", sv_required())
+  iv$add_rule("cat_behavior", sv_required())
+  iv$enable()
+  
   observeEvent(input$num_one, {
     updateSelectInput(session, "num_two",
                       choices = num_var_choices[!num_var_choices %in% input$num_one])
@@ -141,7 +168,29 @@ server <- function(input, output, session) {
   
   observeEvent(input$summ_var, {
     updateSelectInput(session, "group_var",
-                      choices = cat_var_choices[!cat_var_choices %in% input$summ_var])
+                      choices = cat_var_choices[!cat_var_choices %in% input$summ_var],
+                      selected = "None")
+  })
+  
+  observeEvent(input$subset_data, {
+    if(is.null(input$cat_device) | is.null(input$cat_behavior)) {
+      shinyalert("Please select at least one device model and at least user one behavior class")
+    }
+  })
+  
+  observeEvent(input$tab_switch, {
+    if((is.null(input$cat_device) |
+       is.null(input$cat_behavior) |
+       input$subset_data == 0) &
+       input$tab_switch > 1) {
+      shinyalert("Please first subset dataset, then press'Apply Subset' in left sidebar")
+    }
+  })
+  
+  observeEvent(input$axis1_var, {
+    updateSelectInput(session, "axis2_var",
+                      choices = mod_var_choices[!mod_var_choices %in% input$axis1_var],
+                      selected = "None")
   })
   
   output$slider_num_one <- renderUI({
@@ -239,19 +288,33 @@ server <- function(input, output, session) {
                    color = if (input$fill_var != "None") input$fill_var else NULL
                    ) +
         geom_point() +
-        ggtitle(paste0("Relationship between ", input$axis1_var, " and ", input$axis2_var)) +
-        labs(subtitle = paste0("Considering effects of ", input$fill_var, " and ", input$facet_var),
-             color = input$fill_var)
+        ggtitle(paste0("Relationship between ", input$axis1_var, " and ", input$axis2_var))
+      if(input$fill_var != "None") {
+        g <- g +
+          labs(subtitle = paste0("Considering effects of ", input$fill_var),
+             color = input$fill_var)}
+    } else if (input$axis1_var %in% num_var_choices
+               & input$axis2_var == "None"
+               & input$fill_var != "None") {
+      g <- g +
+        aes_string(x = input$axis1_var,
+                   fill = input$fill_var) +
+        geom_density(alpha = 0.5) +
+        ggtitle(paste0("Distribution of ", input$axis1_var)) +
+        labs(subtitle = paste0("Considering effects of ", input$fill_var),
+             fill = input$fill_var)
     } else if (input$axis1_var %in% num_var_choices & input$axis2_var == "None") {
       g <- g +
         aes_string(x = input$axis1_var) +
-        geom_histogram()
+        geom_density(fill = "grey60") +
+        ggtitle(paste0("Distribution of ", input$axis1_var))
     } else if (input$axis1_var %in% num_var_choices | input$axis2_var %in% num_var_choices) {
       g <- g +
         aes_string(x = input$axis1_var,
-                   y = input$axis2_var) +
+                   y = input$axis2_var,
+                   fill = if (input$fill_var != "None") input$fill_var else NULL) +
         geom_boxplot() +
-        theme(legend.position = "none") +
+        labs(fill = input$fill_var) +
         ggtitle(paste0("Distribution relative to ", input$axis1_var, " and ", input$axis2_var))
     } else if (input$axis2_var != "None") {
       g <- g +
