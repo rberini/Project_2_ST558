@@ -1,3 +1,4 @@
+#load all required packages
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -8,7 +9,7 @@ library(shinyvalidate)
 library(shinyalert)
 library(shinycssloaders)
 
-#generate data set
+#generate data set with automatic renaming of columns in upper camel case for improve readability across the app
 user_behavior_dataset <-
   read_csv("user_behavior_dataset.csv") |>
   clean_names(case = "big_camel") |>
@@ -27,7 +28,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       h2("Select how to subset the mobile behavior data:"),
-      #Choose (at least) two categorical variables they can subset from. If there are groups of categories that make sense to have them choose for a given variable, that’s fine. That is, they don’t need to be able to choose any level of the each variable to subset. The user should be able to select all levels as well.
+      #Choose two categorical variables the user can subset from. The user should be able to select any or all levels.
       selectInput("cat_device",
                   "Device models",
                   choices = levels(user_behavior_dataset$DeviceModel),
@@ -56,11 +57,11 @@ ui <- fluidPage(
                           tags$div(
                             tags$h3("Purpose and Overview of this Shiny App"),
                             tags$p("This app allows the user to interactively explore the Mobile Device Usage and User Behavior Dataset (described below). The user can subset the data, download that subset, and generate numeric and graphical summaries of variables, or combinations of variables, in that subset"),
-                            tags$h3("Navgating the App"),
+                            tags$h3("Navigating the App"),
                             tags$ul(
                               tags$li("Left Sidebar Panel: Asks the user to subset the data"),
                               tags$li("Data Download Tab: Allows the user to view and download the subsetted data"),
-                              tags$li("Data Exploration Tab: Allows the user to generate numeric and/or graphical summaries of the subsetted data")
+                              tags$li("Data Exploration Tab: Allows the user to generate numeric and/or graphical summaries of the subsetted data based on combinations of variables selected")
                             ),
                             tags$h3("About the Dataset"),
                             tags$p("The Mobile Device Usage and User Behavior Dataset provides a comprehensive analysis of mobile device usage patterns and user behavior classification. It contains 700 samples of user data. Available metrics are outlined in data dictionary below."),
@@ -156,37 +157,43 @@ ui <- fluidPage(
 #server section
 server <- function(input, output, session) {
   
+  #validate at least one level selection made for each categorical variable
   iv <- InputValidator$new()
   iv$add_rule("cat_device", sv_required())
   iv$add_rule("cat_behavior", sv_required())
   iv$enable()
   
+  #remove first numeric variable selected from options for second numeric variable
   observeEvent(input$num_one, {
     updateSelectInput(session, "num_two",
                       choices = num_var_choices[!num_var_choices %in% input$num_one])
   })
   
+  #if categorical variable selected for summary statistics, remove that variable from options for grouping variable
   observeEvent(input$summ_var, {
     updateSelectInput(session, "group_var",
                       choices = cat_var_choices[!cat_var_choices %in% input$summ_var],
                       selected = "None")
   })
   
+  #display error if user tries to apply subset without selected at least one level for each categorical variable
   observeEvent(input$subset_data, {
     if(is.null(input$cat_device) | is.null(input$cat_behavior)) {
-      shinyalert("Please select at least one device model and at least user one behavior class")
+      shinyalert("Please select at least one device model and at least one user behavior class")
     }
   })
   
+  #display error if user navigates to Data Download or Data Exploration without first subsetting the data
   observeEvent(input$tab_switch, {
     if((is.null(input$cat_device) |
        is.null(input$cat_behavior) |
        input$subset_data == 0) &
        input$tab_switch > 1) {
-      shinyalert("Please first subset dataset, then press'Apply Subset' in left sidebar")
+      shinyalert("Please first subset the dataset, then press 'Apply Subset' in left sidebar")
     }
   })
   
+  #remove first variable selected from options for second variable
   observeEvent(input$axis1_var, {
     updateSelectInput(session, "axis2_var",
                       choices = mod_var_choices[!mod_var_choices %in% input$axis1_var],
@@ -238,6 +245,7 @@ server <- function(input, output, session) {
       }
     )
   
+  #automatically generate appropriate summary based upon types and combinations of variables selected
   summaries <- eventReactive(c(input$summ_var, input$group_var), {
     req(input$summ_var, input$group_var)
     data <- ubd_subset()
@@ -245,9 +253,9 @@ server <- function(input, output, session) {
       if(input$summ_var %in% num_var_choices) {
         data |>
         summarise(mean = mean(.data[[input$summ_var]], na.rm = T),
-                  median = median(.data[[input$summ_var]]), na.rm = T,
-                  sd = sd(.data[[input$summ_var]]), na.rm = T,
-                  IQR = IQR(.data[[input$summ_var]]), na.rm = T,
+                  median = median(.data[[input$summ_var]], na.rm = T),
+                  sd = sd(.data[[input$summ_var]], na.rm = T),
+                  IQR = IQR(.data[[input$summ_var]], na.rm = T),
                   .groups = "drop") |>
         round(2)
       } else {
@@ -260,6 +268,7 @@ server <- function(input, output, session) {
         data |>
           select(.data[[input$group_var]], .data[[input$summ_var]]) |>
           group_by(.data[[input$group_var]]) |>
+          drop_na(.data[[input$group_var]], .data[[input$summ_var]]) |>
           summarise(across(where(is.numeric),
                            list("mean" = mean, "median" = median, "stdev" = sd, "IQR" = IQR),
                            .names = "{.fn}"))|>
@@ -267,6 +276,7 @@ server <- function(input, output, session) {
       } else {
       data |>
           group_by(.data[[input$summ_var]], .data[[input$group_var]]) |>
+          drop_na(.data[[input$summ_var]], .data[[input$group_var]]) |>
           summarise(count = n()) |>
           pivot_wider(names_from = .data[[input$group_var]], values_from = count)
       }
@@ -275,7 +285,8 @@ server <- function(input, output, session) {
     )
   
   output$summ_table <- renderDT(datatable(summaries(), rownames = F))
-
+  
+  #automatically generate appropriate graph based upon types and combinations of variables selected
   graph <- eventReactive(c(input$axis1_var, input$axis2_var, input$fill_var, input$facet_var), {
     req(input$axis1_var, input$axis2_var, input$fill_var, input$facet_var)
     data <- ubd_subset()
