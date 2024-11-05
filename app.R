@@ -200,6 +200,7 @@ server <- function(input, output, session) {
                       selected = "None")
   })
   
+  #change slider one values based upon variable selected
   output$slider_num_one <- renderUI({
     req(input$num_one)
     min_val <- min(user_behavior_dataset[[input$num_one]], na.rm = T)
@@ -211,6 +212,7 @@ server <- function(input, output, session) {
                 value = c(min_val, max_val))
   })
   
+  #change slider two values based upon variable selected
   output$slider_num_two <- renderUI({
     req(input$num_two)
     min_val <- min(user_behavior_dataset[[input$num_two]], na.rm = T)
@@ -222,6 +224,7 @@ server <- function(input, output, session) {
                 value = c(min_val, max_val))
   })
   
+  #create the data subset when action button is pressed
   ubd_subset <- eventReactive(input$subset_data, {
     user_behavior_dataset |>
       filter(DeviceModel %in% input$cat_device,
@@ -236,6 +239,7 @@ server <- function(input, output, session) {
   
   output$ubd_subset_dt <- renderDT(datatable(ubd_subset()))
   
+  #setup the csv file for data download if user presses download button
   output$download_subset <- downloadHandler(
     filename = function() {
       paste('ubd-subset-', Sys.Date(), '.csv', sep='')

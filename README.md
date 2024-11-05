@@ -2,6 +2,8 @@
 
 ## About the shiny app
 
+[Click here to access the app on shinyapps.io](https://qlw0s5-robert-berini.shinyapps.io/Project_2_ST558/ "https://qlw0s5-robert-berini.shinyapps.io/Project_2_ST558/")
+
 This app allows the user to interactively explore the **Mobile Device Usage and User Behavior Dataset** (described below). The user can subset the data, download that subset, and generate numeric and graphical summaries of variables, or combinations of variables, in that subset. It features three areas for working with the data:
 
 -   Left Sidebar Panel: Asks the user to subset the data based upon levels of two categorical variables and value ranges of two numerical variables
@@ -19,9 +21,9 @@ Data dictionary:
 -   `OperatingSystem`: The OS of the device (iOS or Android)
 -   `AppUsageTimeMinDay`: Daily time spent on mobile applications, measured in minutes
 -   `ScreenOnTimeHoursDay`: Average hours per day the screen is active
--   `battery_drain_m_ah_day`: Daily battery consumption in mAh
+-   `batteryDrainMAhDay`: Daily battery consumption in mAh
 -   `NumberOfAppsInstalled`: Total apps available on the device
 -   `DataUsagMbDay`: Daily mobile data consumption in megabytes
 -   `Age`: Age of the user
 -   `Gender`: Gender of the user (Male or Female)
--   `User_behavior_class`: Classification of user behavior based on usage patterns (1 to 5)
+-   `UserBehaviorClass`: Classification of user behavior based on usage patterns (1 to 5)
